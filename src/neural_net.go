@@ -29,7 +29,6 @@ type (
 	// NeuralNet encodes an individuals brain
 	NeuralNet struct {
 		// Contains the sensors that feed to something interesting
-		// These
 		Sensors []Sensor
 
 		Neurons []*Neuron

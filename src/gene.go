@@ -64,11 +64,77 @@ func randUint8() uint8 {
 }
 
 type path = []Connection
+type identifiable struct {
+	objects []interface{}
+}
+
+func (id *identifiable) idOf(obj interface{}) (int, bool) {
+	for idx, item := range id.objects {
+		if obj == item {
+			return idx, false
+		}
+	}
+	id.objects = append(id.objects, obj)
+	return len(id.objects) - 1, true
+}
+
+func (g Genome) buildNet2() (*NeuralNet, error) {
+
+	nodes := &identifiable{}
+	graph := NewGraph(len(g.genes)+1)
+
+	var sensors, actions []int
+	for _, gene := range g.genes {
+		var isSensor, isAction bool
+		var obj interface{}
+		if gene.sourceIsSensor {
+			obj = getSensor(gene.sourceID)
+			isSensor = true
+		} else {
+			obj = int(gene.sourceID) % g.noOfNeurons
+		}
+		srcID, added := nodes.idOf(obj)
+		if added {
+			err := graph.AddNode(srcID, obj)
+			if err != nil {
+				return nil, err
+			}
+			if isSensor {
+				sensors = append(sensors, srcID)
+			}
+		}
+
+		if gene.sinkIsAction {
+			obj = getAction(gene.sinkID)
+			isAction = true
+		} else {
+			obj = int(gene.sourceID) % g.noOfNeurons
+		}
+		dstID, added := nodes.idOf(obj)
+		if added {
+			err := graph.AddNode(dstID, obj)
+			if err != nil {
+				return nil, err
+			}
+			if isAction {
+				actions = append(actions, dstID)
+			}
+		}
+
+		err := graph.AddVertice(srcID, dstID, float64(gene.weight)/float64(math.MaxInt16))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	paths := graph.PathsBetween(sensors, actions)
+
+
+	return nil, nil
+}
 
 func (g Genome) buildNet() NeuralNet {
-	result := NeuralNet{
-		Neurons: make([]*Neuron, g.noOfNeurons),
-	}
+	result := NeuralNet{}
 	tentative := []path{}
 	done := make([]bool, len(g.genes))
 	doneCount := 0
@@ -140,8 +206,8 @@ func createActionSink(sinkID uint8) ActionSink {
 	return output
 }
 
-func createSensorInput(source uint8, result NeuralNet) SensorInput {
-	sensor := Sensor(source % uint8(NUM_SENSES))
+func createSensorInput(sourceID uint8, result NeuralNet) SensorInput {
+	sensor := getSensor(sourceID)
 	sensorIdx := -1
 	for i, s := range result.Sensors {
 		if s == sensor {
@@ -159,4 +225,11 @@ func createSensorInput(source uint8, result NeuralNet) SensorInput {
 		idx: sensorIdx,
 	}
 	return input
+}
+
+func getSensor(source uint8) Sensor {
+	return Sensor(source % uint8(NUM_SENSES))
+}
+func getAction(source uint8) Action {
+	return Action(source % uint8(NUM_ACTIONS))
 }
