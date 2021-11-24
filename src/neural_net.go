@@ -11,7 +11,7 @@ type (
 	// and sideways connection allowed. Weighted connections are allowed
 	// directly from any source to any action.
 
-	// Currently the genome does not specify the activation function used in
+	// Currently, the genome does not specify the activation function used in
 	// the neurons.
 
 	// When the input is a sensor, the input value to the sink is the raw

@@ -21,9 +21,13 @@ func (s *simulation) step() {
 			if value > 0 {
 				switch Action(act) {
 				case MOVE_X:
-					individual.location.X += int(value)
+					loc := individual.location
+					loc.X += int(value)
+					s.world.updateLocation(peepIdx, loc)
 				case MOVE_Y:
-					individual.location.Y += int(value)
+					loc := individual.location
+					loc.Y += int(value)
+					s.world.updateLocation(peepIdx, loc)
 				}
 			}
 		}
@@ -38,14 +42,42 @@ func init() {
 }
 
 func main() {
+	world := World{
+		StepsPerGeneration: 250,
+		XSize:              100,
+		YSize:              100,
+		cells:              make([]Cell, 100*100),
+		peeps:              []*Individual{},
+	}
+	for i := 0; i < 100; i++ {
+		individual := createIndividual(world.XSize, world.YSize)
+		world.addPeep(individual)
+	}
+
+	s := &simulation{
+		world: world,
+	}
+
+	steps := s.world.StepsPerGeneration
+	for steps > 0 {
+		steps--
+		s.step()
+	}
+}
+
+func createIndividual(x, y int) *Individual {
 	genome := makeRandomGenome(10)
 	brain, err := genome.buildNet2()
 	if err != nil {
 		panic(err)
 	}
+	place := Coord{
+		X: rand.Intn(x),
+		Y: rand.Intn(y),
+	}
 	peep := &Individual{
-		location:       &Coord{},
-		birthPlace:     &Coord{},
+		location:       place,
+		birthPlace:     place,
 		age:            0,
 		brain:          *brain,
 		responsiveness: 1,
@@ -54,19 +86,5 @@ func main() {
 		lastMoveDir:    0,
 		challengeBits:  0,
 	}
-	s := &simulation{
-		world: World{
-			StepsPerGeneration: 250,
-			XSize:              100,
-			YSize:              100,
-			cells:              make([]Cell, 100*100),
-			peeps:              []*Individual{peep},
-		},
-	}
-
-	steps := s.world.StepsPerGeneration
-	for steps > 0 {
-		steps--
-		s.step()
-	}
+	return peep
 }

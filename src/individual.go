@@ -5,8 +5,8 @@ import "math"
 type (
 	Individual struct {
 		genes          Genome
-		location       *Coord
-		birthPlace     *Coord
+		location       Coord
+		birthPlace     Coord
 		age            uint16
 		brain          NeuralNet
 		responsiveness float32 // 0 is asleep
