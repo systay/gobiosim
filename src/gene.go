@@ -107,7 +107,7 @@ func (g Genome) buildNet() NeuralNet {
 		}
 	}
 
-	for doneCount < len(g) {
+	for doneCount < len(g.genes) {
 		for id, gene := range g.genes {
 			if done[id] {
 				continue
@@ -126,7 +126,6 @@ func (g Genome) buildNet() NeuralNet {
 			}
 
 			conn.To = result.getNeuronByID(int(gene.sinkID) % g.noOfNeurons)
-
 
 		}
 	}
