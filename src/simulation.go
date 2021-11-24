@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
 type simulation struct {
 	world World
 }
@@ -24,14 +30,24 @@ func (s *simulation) step() {
 	}
 }
 
+func init() {
+	seed := time.Now().UnixNano()
+	//nano := int64(1637780343848163000)
+	fmt.Printf("rand seed: %d\n", seed)
+	rand.Seed(seed)
+}
+
 func main() {
-	genome := makeRandomGenome(2)
-	brain := genome.buildNet()
+	genome := makeRandomGenome(10)
+	brain, err := genome.buildNet2()
+	if err != nil {
+		panic(err)
+	}
 	peep := &Individual{
 		location:       &Coord{},
 		birthPlace:     &Coord{},
 		age:            0,
-		brain:          brain,
+		brain:          *brain,
 		responsiveness: 1,
 		oscPeriod:      0,
 		longProbeDist:  0,

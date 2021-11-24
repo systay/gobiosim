@@ -64,12 +64,22 @@ type (
 	}
 )
 
-func (s SensorInput) Get()     {}
-func (n *Neuron) Get()    {}
-func (n *Neuron) Set()    {}
-func (n ActionSink) Set() {}
+func (s SensorInput) Get() {}
+func (n *Neuron) Get()     {}
+func (n *Neuron) Set()     {}
+func (n ActionSink) Set()  {}
 
-func (n NeuralNet) getNeuronByID(id int) *Neuron {
+func (n *NeuralNet) getSensorOffset(s Sensor) int {
+	for idx, sensor := range n.Sensors {
+		if s == sensor {
+			return idx
+		}
+	}
+
+	n.Sensors = append(n.Sensors, s)
+	return len(n.Sensors) - 1
+}
+func (n *NeuralNet) getNeuronByID(id int) *Neuron {
 	neuron := n.Neurons[id]
 	if neuron == nil {
 		neuron = &Neuron{}

@@ -51,7 +51,7 @@ func makeRandomGene() Gene {
 func makeRandomGenome(size int) Genome {
 	genome := Genome{
 		genes:       make([]Gene, 0, size),
-		noOfNeurons: size,
+		noOfNeurons: int(math.Sqrt(float64(size))),
 	}
 	for i := 0; i < size; i++ {
 		genome.genes = append(genome.genes, makeRandomGene())
@@ -80,9 +80,66 @@ func (id *identifiable) idOf(obj interface{}) (int, bool) {
 
 func (g Genome) buildNet2() (*NeuralNet, error) {
 
-	nodes := &identifiable{}
-	graph := NewGraph(len(g.genes)+1)
+	graph, paths, err := buildGraphAndPaths(g)
+	if err != nil {
+		return nil, err
+	}
 
+	result := NewNeuralNet(g.noOfNeurons)
+
+	seen := map[int]interface{}{}
+	for _, path := range paths {
+		for _, vertix := range path {
+			from := vertix.from
+			to := vertix.to
+
+			vIdx := from*graph.size + to
+			if _, ok := seen[vIdx]; ok {
+				continue
+			}
+			seen[vIdx] = nil
+			con := Connection{
+				From:       nil,
+				To:         nil,
+				multiplier: vertix.data.(float64),
+			}
+
+			switch src := graph.GetNode(from).(type) {
+			case Sensor:
+				con.From = SensorInput{
+					s:   src,
+					idx: result.getSensorOffset(src),
+				}
+			case int:
+				con.From = result.getNeuronByID(src)
+			}
+
+			switch src := graph.GetNode(to).(type) {
+			case Action:
+				con.To = ActionSink{
+					action: src,
+				}
+			case int:
+				con.To = result.getNeuronByID(src)
+			}
+
+			result.Connections = append(result.Connections, con)
+		}
+	}
+
+	return result, nil
+}
+
+func NewNeuralNet(noOfNeurons int) *NeuralNet {
+	return &NeuralNet{
+		Neurons: make([]*Neuron, noOfNeurons),
+	}
+}
+
+func buildGraphAndPaths(g Genome) (*Graph, []Path, error) {
+	maxPossibleSize := len(g.genes) * 2
+	graph := NewGraph(maxPossibleSize)
+	nodes := &identifiable{}
 	var sensors, actions []int
 	for _, gene := range g.genes {
 		var isSensor, isAction bool
@@ -97,7 +154,7 @@ func (g Genome) buildNet2() (*NeuralNet, error) {
 		if added {
 			err := graph.AddNode(srcID, obj)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if isSensor {
 				sensors = append(sensors, srcID)
@@ -114,117 +171,22 @@ func (g Genome) buildNet2() (*NeuralNet, error) {
 		if added {
 			err := graph.AddNode(dstID, obj)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if isAction {
 				actions = append(actions, dstID)
 			}
 		}
 
-		err := graph.AddVertice(srcID, dstID, float64(gene.weight)/float64(math.MaxInt16))
+		weight := float64(gene.weight) / float64(math.MaxInt16)
+		err := graph.AddVertix(srcID, dstID, weight)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
 	paths := graph.PathsBetween(sensors, actions)
-
-
-	return nil, nil
-}
-
-func (g Genome) buildNet() NeuralNet {
-	result := NeuralNet{}
-	tentative := []path{}
-	done := make([]bool, len(g.genes))
-	doneCount := 0
-
-	// we first find all action sinks and add them to the net if they connect a Sensor with an Action.
-	// if the Action is connected through a Neuron, we add it to the tentative list, until we know that
-	// there is a connection from some Sensor to the neuron, directly or indirectly
-	for id, gene := range g.genes {
-		if gene.sinkIsAction {
-			done[id] = true
-			doneCount++
-			output := createActionSink(gene.sinkID)
-			multiplier := float64(gene.weight) / float64(math.MaxInt16)
-
-			if gene.sourceIsSensor {
-				input := createSensorInput(gene.sourceID, result)
-
-				// we have a connection straight from a sensor to an action sink
-				// no need to do anything else - we just add this as is
-				conn := Connection{
-					From:       input,
-					To:         output,
-					multiplier: multiplier,
-				}
-				result.Connections = append(result.Connections, conn)
-				continue
-			}
-
-			neuron := result.getNeuronByID(int(gene.sourceID) % g.noOfNeurons)
-			conn := Connection{
-				From:       neuron,
-				To:         output,
-				multiplier: multiplier,
-			}
-			tentative = append(tentative, path{conn})
-		}
-	}
-
-	for doneCount < len(g.genes) {
-		for id, gene := range g.genes {
-			if done[id] {
-				continue
-			}
-
-			conn := Connection{
-				From:       nil,
-				To:         nil,
-				multiplier: float64(gene.weight) / float64(math.MaxInt16),
-			}
-
-			if gene.sourceIsSensor {
-				conn.From = createSensorInput(gene.sourceID, result)
-			} else {
-				conn.From = result.getNeuronByID(int(gene.sourceID) % g.noOfNeurons)
-			}
-
-			conn.To = result.getNeuronByID(int(gene.sinkID) % g.noOfNeurons)
-
-		}
-	}
-	return result
-}
-
-func createActionSink(sinkID uint8) ActionSink {
-	action := Action(sinkID % uint8(NUM_ACTIONS))
-	output := ActionSink{
-		action: action,
-	}
-	return output
-}
-
-func createSensorInput(sourceID uint8, result NeuralNet) SensorInput {
-	sensor := getSensor(sourceID)
-	sensorIdx := -1
-	for i, s := range result.Sensors {
-		if s == sensor {
-			// the sensor is already added to the net - just store the offset
-			sensorIdx = i
-		}
-	}
-	if sensorIdx < 0 {
-		// not already added to the net - let's add it
-		result.Sensors = append(result.Sensors, sensor)
-		sensorIdx = len(result.Sensors) - 1
-	}
-	input := SensorInput{
-		s:   sensor,
-		idx: sensorIdx,
-	}
-	return input
+	return graph, paths, nil
 }
 
 func getSensor(source uint8) Sensor {

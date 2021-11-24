@@ -19,9 +19,9 @@ func TestName(t *testing.T) {
 		g.AddNode(2, "node 2"))
 
 	require.NoError(t,
-		g.AddVertice(0, 1, "0->1"))
+		g.AddVertix(0, 1, "0->1"))
 	require.NoError(t,
-		g.AddVertice(1, 2, "1->2"))
+		g.AddVertix(1, 2, "1->2"))
 
 	apa := g.PathsBetween([]int{0}, []int{2})
 	fmt.Printf("%v\n", apa)
@@ -58,7 +58,7 @@ func addNode(t *testing.T, g *Graph, i int, node string) {
 }
 func addV(t *testing.T, g *Graph, from, to int) {
 	require.NoError(t,
-		g.AddVertice(from, to, ""))
+		g.AddVertix(from, to, ""))
 }
 
 func TestNeigbour(t *testing.T) {
@@ -71,9 +71,9 @@ func TestNeigbour(t *testing.T) {
 		g.AddNode(2, "node 2"))
 
 	require.NoError(t,
-		g.AddVertice(0, 1, "0->1"))
+		g.AddVertix(0, 1, "0->1"))
 	require.NoError(t,
-		g.AddVertice(0, 2, "0->2"))
+		g.AddVertix(0, 2, "0->2"))
 
 	assert.Equal(t, []int{1, 2}, g.NeighboursFrom(0))
 	assert.Empty(t, g.NeighboursFrom(1))

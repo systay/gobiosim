@@ -41,7 +41,7 @@ func (g *Graph) AddNode(i int, node interface{}) error {
 		return fmt.Errorf("node too large")
 	}
 	if g.nodes[i] != nil {
-		return fmt.Errorf("already taked")
+		return fmt.Errorf("node already taken")
 	}
 	g.nodes[i] = node
 	return nil
@@ -59,14 +59,14 @@ func (g *Graph) GetVertix(from, to int) interface{} {
 	return g.vertices[vIdx-1]
 }
 
-func (g *Graph) AddVertice(from, to int, data interface{}) error {
+func (g *Graph) AddVertix(from, to int, data interface{}) error {
 	if g.size <= from || g.size <= to {
 		return fmt.Errorf("node too large")
 	}
 
 	idx := g.matrixOffset(from, to)
 	if g.matrix[idx] != 0 {
-		return fmt.Errorf("already taked")
+		return nil
 	}
 	g.vertices = append(g.vertices, Vertix{
 		from: from,
@@ -136,4 +136,8 @@ func (g *Graph) PathsBetween(from, to []int) (result []Path) {
 		}
 	}
 	return
+}
+
+func (g *Graph) GetNode(node int) interface{} {
+	return g.nodes[node]
 }
