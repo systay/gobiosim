@@ -1,19 +1,17 @@
 package main
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 type (
 	Individual struct {
-		genes          Genome
-		location       Coord
-		birthPlace     Coord
-		age            uint16
-		brain          NeuralNet
-		responsiveness float32 // 0 is asleep
-		oscPeriod      uint    // 2..4*p.stepsPerGeneration (TBD, see executeActions())
-		longProbeDist  uint    // distance for long forward probe for obstructions
-		lastMoveDir    Compass
-		challengeBits  uint
+		genome     Genome
+		location   Coord
+		birthPlace Coord
+		age        uint16
+		brain      NeuralNet
 	}
 
 	// Actions encodes the actions taken by an individual. The offset corresponds to the Action value,
@@ -66,7 +64,41 @@ func (i *Individual) step(world World) Actions {
 		}
 	}
 	i.age++
+
+	for idx, action := range actions {
+		actions[idx] = math.Tanh(action)
+	}
+
 	return actions
+}
+
+const MUTATION_RATE = 0.01 * math.MaxFloat64
+
+func plusMinusOne() int {
+	if rand.Intn(2) == 0 {
+		return -1
+	}
+	return 1
+}
+
+func (i *Individual) clone() *Individual {
+	clone := *i
+	clone.age = 0
+	for _, gene := range clone.genome.genes {
+		if rand.NormFloat64() < MUTATION_RATE {
+			switch rand.Intn(4) {
+			case 0:
+				gene.sourceID = uint8(int(gene.sourceID) + plusMinusOne())
+			case 1:
+				gene.sinkID = uint8(int(gene.sinkID) + plusMinusOne())
+			case 2:
+				gene.noOfNeurons = uint8(int(gene.noOfNeurons) + plusMinusOne())
+			case 3:
+				gene.weight = int16(int(gene.weight) + plusMinusOne())
+			}
+		}
+	}
+	return &clone
 }
 
 func getSensorValue(i *Individual, w World, s Sensor) float64 {
@@ -76,7 +108,7 @@ func getSensorValue(i *Individual, w World, s Sensor) float64 {
 		return float64(i.location.X / w.XSize)
 	case LOC_Y:
 		// map current Y location to value between 0.0..1.0
-		return float64(i.location.Y)
+		return float64(i.location.Y / w.YSize)
 	case BOUNDARY_DIST:
 		// Finds the closest boundary, compares that to the max possible dist
 		// to a boundary from the center, and converts that linearly to the

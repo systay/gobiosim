@@ -10,6 +10,8 @@ type simulation struct {
 	world World
 }
 
+const MOVEMENT = 3
+
 func (s *simulation) step() {
 	var peepActions []Actions
 	for _, peep := range s.world.peeps {
@@ -22,11 +24,11 @@ func (s *simulation) step() {
 				switch Action(act) {
 				case MOVE_X:
 					loc := individual.location
-					loc.X += int(value)
+					loc.X += int(value * MOVEMENT)
 					s.world.updateLocation(peepIdx, loc)
 				case MOVE_Y:
 					loc := individual.location
-					loc.Y += int(value)
+					loc.Y += int(value * MOVEMENT)
 					s.world.updateLocation(peepIdx, loc)
 				}
 			}
@@ -36,12 +38,15 @@ func (s *simulation) step() {
 
 func init() {
 	seed := time.Now().UnixNano()
-	//nano := int64(1637780343848163000)
+	// nano := int64(1637780343848163000)
 	fmt.Printf("rand seed: %d\n", seed)
 	rand.Seed(seed)
 }
 
+const POPULATION = 80
+
 func main() {
+
 	world := World{
 		StepsPerGeneration: 250,
 		XSize:              100,
@@ -49,7 +54,7 @@ func main() {
 		cells:              make([]Cell, 100*100),
 		peeps:              []*Individual{},
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < POPULATION; i++ {
 		individual := createIndividual(world.XSize, world.YSize)
 		world.addPeep(individual)
 	}
@@ -58,10 +63,46 @@ func main() {
 		world: world,
 	}
 
-	steps := s.world.StepsPerGeneration
-	for steps > 0 {
-		steps--
-		s.step()
+	generations := 1000
+	for generations > 0 {
+		generations--
+
+		steps := s.world.StepsPerGeneration
+		for steps > 0 {
+			time.Sleep(10 * time.Millisecond)
+			world.printIndividuals()
+			fmt.Println(steps)
+			steps--
+			s.step()
+		}
+
+		peeps := world.peeps
+		world.clearAll()
+
+		var survivors []*Individual
+		for _, peep := range peeps {
+			if peep.location.X > 40 && peep.location.X < 60 &&
+				peep.location.Y > 40 && peep.location.Y < 60 {
+				survivors = append(survivors, peep)
+			}
+		}
+
+		if len(survivors) == 0 {
+			panic("extinction")
+		}
+
+		copies := POPULATION / len(survivors)
+
+		for _, survivor := range survivors {
+			for i := 0; i <= copies; i++ {
+				clone := survivor.clone()
+				clone.location = randomCoord(world.XSize, world.YSize)
+				world.addPeep(clone)
+			}
+		}
+
+		fmt.Printf("%d survivors for generation %d", len(survivors), generations)
+		time.Sleep(3 * time.Second)
 	}
 }
 
@@ -71,20 +112,20 @@ func createIndividual(x, y int) *Individual {
 	if err != nil {
 		panic(err)
 	}
+	place := randomCoord(x, y)
+	peep := &Individual{
+		location:   place,
+		birthPlace: place,
+		age:        0,
+		brain:      *brain,
+	}
+	return peep
+}
+
+func randomCoord(x int, y int) Coord {
 	place := Coord{
 		X: rand.Intn(x),
 		Y: rand.Intn(y),
 	}
-	peep := &Individual{
-		location:       place,
-		birthPlace:     place,
-		age:            0,
-		brain:          *brain,
-		responsiveness: 1,
-		oscPeriod:      0,
-		longProbeDist:  0,
-		lastMoveDir:    0,
-		challengeBits:  0,
-	}
-	return peep
+	return place
 }

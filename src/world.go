@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 type (
 	Cell  = uint16
 	World struct {
@@ -25,7 +29,18 @@ func (world *World) offset(place Coord) int {
 	return place.Y*world.XSize + place.X
 }
 
+func limit(v, max int) int {
+	if v > max {
+		return max
+	}
+	return v
+}
+
 func (world *World) updateLocation(peepIdx int, location Coord) {
+	// contain ourselves to the given world
+	location.X = limit(location.X, world.XSize-1)
+	location.Y = limit(location.Y, world.YSize-1)
+
 	// first we check if the spot is taken. if it isn't, we just ignore the location change
 	newOffset := world.offset(location)
 	if world.cells[newOffset] != EMPTY {
@@ -37,4 +52,19 @@ func (world *World) updateLocation(peepIdx int, location Coord) {
 	world.cells[oldOffset] = EMPTY
 	world.cells[newOffset] = Cell(peepIdx)
 	world.peeps[peepIdx].location = location
+}
+
+func (world *World) printIndividuals() {
+	fmt.Print("\033[H\033[2J")
+
+	for _, peep := range world.peeps {
+		fmt.Printf(" %02d/%02d\n", peep.location.X, peep.location.Y)
+	}
+}
+
+func (world *World) clearAll() {
+	for _, peep := range world.peeps {
+		world.cells[world.offset(peep.location)] = EMPTY
+	}
+	world.peeps = nil
 }
