@@ -2,38 +2,30 @@ package main
 
 import (
 	"fmt"
+	"github.com/mattn/go-runewidth"
+	"github.com/nsf/termbox-go"
 	"math/rand"
+	"os"
+	"sync"
 	"time"
 )
 
 type simulation struct {
-	world World
+	world *World
 }
 
-const MOVEMENT = 3
+const (
+	MOVEMENT      = 3
+	POPULATION    = 1000
+	MUTATION_RATE = 10
+	GENERATIONS   = 5000
+	STEPS_PER_GEN = 250
+	SIZE          = 100
+)
 
-func (s *simulation) step() {
-	var peepActions []Actions
-	for _, peep := range s.world.peeps {
-		peepActions = append(peepActions, peep.step(s.world))
-	}
-	for peepIdx, actions := range peepActions {
-		individual := s.world.peeps[peepIdx]
-		for act, value := range actions {
-			if value > 0 {
-				switch Action(act) {
-				case MOVE_X:
-					loc := individual.location
-					loc.X += int(value * MOVEMENT)
-					s.world.updateLocation(peepIdx, loc)
-				case MOVE_Y:
-					loc := individual.location
-					loc.Y += int(value * MOVEMENT)
-					s.world.updateLocation(peepIdx, loc)
-				}
-			}
-		}
-	}
+type act struct {
+	peepID  int
+	actions Actions
 }
 
 func init() {
@@ -43,83 +35,94 @@ func init() {
 	rand.Seed(seed)
 }
 
-const POPULATION = 80
+// This function is often useful:
+func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
+	for _, c := range msg {
+		termbox.SetCell(x, y, c, fg, bg)
+		x += runewidth.RuneWidth(c)
+	}
+}
 
 func main() {
-
-	world := World{
-		StepsPerGeneration: 250,
-		XSize:              100,
-		YSize:              100,
+	// _ = termbox.Init()
+	// defer termbox.Close()
+	world := &World{
+		StepsPerGeneration: STEPS_PER_GEN,
+		XSize:              SIZE,
+		YSize:              SIZE,
 		cells:              make([]Cell, 100*100),
-		peeps:              []*Individual{},
 	}
-	for i := 0; i < POPULATION; i++ {
-		individual := createIndividual(world.XSize, world.YSize)
-		world.addPeep(individual)
-	}
+	fillWithRandomPeeps(world)
 
 	s := &simulation{
 		world: world,
 	}
 
-	generations := 1000
+	generations := GENERATIONS
 	for generations > 0 {
 		generations--
 
 		steps := s.world.StepsPerGeneration
 		for steps > 0 {
-			time.Sleep(10 * time.Millisecond)
-			world.printIndividuals()
-			fmt.Println(steps)
 			steps--
 			s.step()
+			// world.printIndividuals()
+			// time.Sleep(100)
 		}
 
-		peeps := world.peeps
-		world.clearAll()
-
-		var survivors []*Individual
-		for _, peep := range peeps {
-			if peep.location.X > 40 && peep.location.X < 60 &&
-				peep.location.Y > 40 && peep.location.Y < 60 {
-				survivors = append(survivors, peep)
-			}
-		}
+		survivors := cull(world)
 
 		if len(survivors) == 0 {
-			panic("extinction")
+			fmt.Println("extinction")
+			os.Exit(0)
 		}
 
 		copies := POPULATION / len(survivors)
 
+		// fair distribution of survivors
 		for _, survivor := range survivors {
-			for i := 0; i <= copies; i++ {
+			for i := 0; i < copies; i++ {
 				clone := survivor.clone()
 				clone.location = randomCoord(world.XSize, world.YSize)
+				clone.birthPlace = clone.location
 				world.addPeep(clone)
 			}
 		}
 
-		fmt.Printf("%d survivors for generation %d", len(survivors), generations)
-		time.Sleep(3 * time.Second)
+		// random fill up of peeps until we reach desired population
+		for len(world.peeps) < POPULATION {
+			peep := survivors[rand.Intn(len(survivors))]
+			clone := peep.clone()
+			clone.location = randomCoord(world.XSize, world.YSize)
+			clone.birthPlace = clone.location
+			world.addPeep(clone)
+		}
+
+		fmt.Printf("%d %d\n", generations, len(survivors))
+		// tbprint(0, 0, termbox.ColorWhite, termbox.ColorDefault, fmt.Sprintf("%d %d\n", generations, len(survivors)))
 	}
+	fmt.Println("done")
 }
 
-func createIndividual(x, y int) *Individual {
-	genome := makeRandomGenome(10)
-	brain, err := genome.buildNet2()
-	if err != nil {
-		panic(err)
+func cull(world *World) []*Individual {
+	peeps := world.peeps
+	world.clearAll()
+
+	var survivors []*Individual
+	for _, peep := range peeps {
+		if peep.location.X > 40 && peep.location.X < 60 &&
+			peep.location.Y > 40 && peep.location.Y < 60 {
+			survivors = append(survivors, peep)
+		}
 	}
-	place := randomCoord(x, y)
-	peep := &Individual{
-		location:   place,
-		birthPlace: place,
-		age:        0,
-		brain:      *brain,
+	return survivors
+}
+
+func fillWithRandomPeeps(world *World) {
+	for i := 0; i < POPULATION; i++ {
+		individual := createIndividual(world.XSize, world.YSize)
+		world.addPeep(individual)
 	}
-	return peep
 }
 
 func randomCoord(x int, y int) Coord {
@@ -128,4 +131,45 @@ func randomCoord(x int, y int) Coord {
 		Y: rand.Intn(y),
 	}
 	return place
+}
+
+func (s *simulation) step() {
+	peepActions := s.startPeeking()
+
+	for actions := range peepActions {
+		individual := s.world.peeps[actions.peepID]
+		for act, value := range actions.actions {
+			if value != 0 {
+				switch Action(act) {
+				case MOVE_X:
+					loc := individual.location
+					loc.X += int(value * MOVEMENT)
+					s.world.updateLocation(actions.peepID, loc)
+				case MOVE_Y:
+					loc := individual.location
+					loc.Y += int(value * MOVEMENT)
+					s.world.updateLocation(actions.peepID, loc)
+				}
+			}
+		}
+	}
+}
+
+func (s *simulation) startPeeking() chan act {
+	// we start all the individuals in separate goroutines, and then wait for them to finish
+	peepActions := make(chan act, len(s.world.peeps))
+	var wg sync.WaitGroup
+	for id, peep := range s.world.peeps {
+		wg.Add(1)
+		go func(peep *Individual, id int) {
+			peepActions <- act{
+				peepID:  id,
+				actions: peep.step(s.world),
+			}
+			wg.Done()
+		}(peep, id)
+	}
+	wg.Wait()
+	close(peepActions)
+	return peepActions
 }

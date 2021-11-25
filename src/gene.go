@@ -17,7 +17,6 @@ type (
 		sourceID       uint8
 		sinkIsAction   bool // action if true, otherwise neuron
 		sinkID         uint8
-		noOfNeurons    uint8 // determines how many neurons this individual has
 		weight         int16
 	}
 
@@ -54,7 +53,7 @@ func makeRandomGenome(size int) Genome {
 		noOfNeurons: int(math.Sqrt(float64(size))),
 	}
 	for i := 0; i < size; i++ {
-		genome.genes = append(genome.genes, makeRandomGene())
+		genome.genes = append(genome.genes, makeRandomGene().normalize(genome.noOfNeurons))
 	}
 	return genome
 }
@@ -63,7 +62,6 @@ func randUint8() uint8 {
 	return uint8(rand.Int31n(255))
 }
 
-type path = []Connection
 type identifiable struct {
 	objects []interface{}
 }
@@ -78,8 +76,7 @@ func (id *identifiable) idOf(obj interface{}) (int, bool) {
 	return len(id.objects) - 1, true
 }
 
-func (g Genome) buildNet2() (*NeuralNet, error) {
-
+func (g Genome) buildNet() (*NeuralNet, error) {
 	graph, paths, err := buildGraphAndPaths(g)
 	if err != nil {
 		return nil, err
@@ -189,9 +186,25 @@ func buildGraphAndPaths(g Genome) (*Graph, []Path, error) {
 	return graph, paths, nil
 }
 
+func (g Gene) normalize(neuronCount int) Gene {
+	if g.sourceIsSensor {
+		g.sourceID = g.sourceID % uint8(NUM_SENSES)
+	} else {
+		g.sourceID = g.sourceID % uint8(neuronCount)
+	}
+	if g.sinkIsAction {
+		g.sinkID = g.sinkID % uint8(NUM_ACTIONS)
+	} else {
+		g.sinkID = g.sinkID % uint8(neuronCount)
+	}
+
+	return g
+}
+
 func getSensor(source uint8) Sensor {
 	return Sensor(source % uint8(NUM_SENSES))
 }
+
 func getAction(source uint8) Action {
 	return Action(source % uint8(NUM_ACTIONS))
 }

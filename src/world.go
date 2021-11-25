@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"github.com/nsf/termbox-go"
 )
 
 type (
@@ -33,6 +33,9 @@ func limit(v, max int) int {
 	if v > max {
 		return max
 	}
+	if v < 0 {
+		return 0
+	}
 	return v
 }
 
@@ -55,11 +58,12 @@ func (world *World) updateLocation(peepIdx int, location Coord) {
 }
 
 func (world *World) printIndividuals() {
-	fmt.Print("\033[H\033[2J")
-
+	_ = termbox.Clear(termbox.ColorBlack, termbox.ColorBlack)
 	for _, peep := range world.peeps {
-		fmt.Printf(" %02d/%02d\n", peep.location.X, peep.location.Y)
+		tbprint(peep.location.X, peep.location.Y, termbox.ColorGreen, termbox.ColorBlue, " X ")
 	}
+
+	_ = termbox.Flush()
 }
 
 func (world *World) clearAll() {

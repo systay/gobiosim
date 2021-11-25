@@ -15,13 +15,12 @@ func TestSimpleGenome(t *testing.T) {
 				sourceID:       uint8(LOC_X),
 				sinkIsAction:   true,
 				sinkID:         uint8(MOVE_X),
-				noOfNeurons:    0,
 				weight:         100,
 			},
 		},
 	}
 
-	net2, err := genome.buildNet2()
+	net2, err := genome.buildNet()
 	require.NoError(t, err)
 	fmt.Println(net2)
 }

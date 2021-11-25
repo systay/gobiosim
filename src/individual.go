@@ -11,7 +11,7 @@ type (
 		location   Coord
 		birthPlace Coord
 		age        uint16
-		brain      NeuralNet
+		brain      *NeuralNet
 	}
 
 	// Actions encodes the actions taken by an individual. The offset corresponds to the Action value,
@@ -19,7 +19,27 @@ type (
 	Actions = []float64
 )
 
-func (i *Individual) step(world World) Actions {
+var a = 0
+
+func createIndividual(x, y int) *Individual {
+	genome := makeRandomGenome(rand.Intn(10))
+	brain, err := genome.buildNet()
+	if err != nil {
+		panic(err)
+	}
+	place := randomCoord(x, y)
+	peep := &Individual{
+		genome:     genome,
+		location:   place,
+		birthPlace: place,
+		age:        0,
+		brain:      brain,
+	}
+
+	return peep
+}
+
+func (i *Individual) step(world *World) Actions {
 	inputs := make([]float64, 0, len(i.brain.Sensors))
 	for _, sensor := range i.brain.Sensors {
 		value := getSensorValue(i, world, sensor)
@@ -72,8 +92,6 @@ func (i *Individual) step(world World) Actions {
 	return actions
 }
 
-const MUTATION_RATE = 0.01 * math.MaxFloat64
-
 func plusMinusOne() int {
 	if rand.Intn(2) == 0 {
 		return -1
@@ -84,31 +102,42 @@ func plusMinusOne() int {
 func (i *Individual) clone() *Individual {
 	clone := *i
 	clone.age = 0
-	for _, gene := range clone.genome.genes {
-		if rand.NormFloat64() < MUTATION_RATE {
-			switch rand.Intn(4) {
+	mutant := false
+	for idx, gene := range clone.genome.genes {
+		normFloat64 := rand.Intn(1000)
+		rate := MUTATION_RATE
+		if normFloat64 < rate {
+			mutant = true
+			switch rand.Intn(3) {
 			case 0:
 				gene.sourceID = uint8(int(gene.sourceID) + plusMinusOne())
 			case 1:
 				gene.sinkID = uint8(int(gene.sinkID) + plusMinusOne())
 			case 2:
-				gene.noOfNeurons = uint8(int(gene.noOfNeurons) + plusMinusOne())
-			case 3:
-				gene.weight = int16(int(gene.weight) + plusMinusOne())
+				gene.weight = int16(int(gene.weight) + plusMinusOne()*10)
 			}
+			normalize := gene.normalize(clone.genome.noOfNeurons)
+			clone.genome.genes[idx] = normalize
 		}
+	}
+	if mutant {
+		net, err := clone.genome.buildNet()
+		if err != nil {
+			panic(err)
+		}
+		clone.brain = net
 	}
 	return &clone
 }
 
-func getSensorValue(i *Individual, w World, s Sensor) float64 {
+func getSensorValue(i *Individual, w *World, s Sensor) float64 {
 	switch s {
 	case LOC_X:
 		// map current X location to value between 0.0..1.0
-		return float64(i.location.X / w.XSize)
+		return float64(i.location.X) / float64(w.XSize)
 	case LOC_Y:
 		// map current Y location to value between 0.0..1.0
-		return float64(i.location.Y / w.YSize)
+		return float64(i.location.Y) / float64(w.YSize)
 	case BOUNDARY_DIST:
 		// Finds the closest boundary, compares that to the max possible dist
 		// to a boundary from the center, and converts that linearly to the
