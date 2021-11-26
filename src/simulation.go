@@ -2,11 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/mattn/go-runewidth"
-	"github.com/nsf/termbox-go"
+	"image"
+	"image/color"
+	"image/png"
+	"io/fs"
+	"log"
 	"math/rand"
 	"os"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -18,7 +22,7 @@ const (
 	MOVEMENT      = 3
 	POPULATION    = 1000
 	MUTATION_RATE = 10
-	GENERATIONS   = 5000
+	GENERATIONS   = 1000
 	STEPS_PER_GEN = 250
 	SIZE          = 100
 )
@@ -35,17 +39,7 @@ func init() {
 	rand.Seed(seed)
 }
 
-// This function is often useful:
-func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
-	for _, c := range msg {
-		termbox.SetCell(x, y, c, fg, bg)
-		x += runewidth.RuneWidth(c)
-	}
-}
-
 func main() {
-	// _ = termbox.Init()
-	// defer termbox.Close()
 	world := &World{
 		StepsPerGeneration: STEPS_PER_GEN,
 		XSize:              SIZE,
@@ -58,16 +52,13 @@ func main() {
 		world: world,
 	}
 
-	generations := GENERATIONS
-	for generations > 0 {
-		generations--
-
-		steps := s.world.StepsPerGeneration
-		for steps > 0 {
-			steps--
+	for generation := 0; generation < GENERATIONS; generation++{
+		for step :=0; step <  s.world.StepsPerGeneration; step++{
 			s.step()
-			// world.printIndividuals()
-			// time.Sleep(100)
+			if generation % 100 == 0 {
+				// we only write an image every hundred generations
+				produceImage(generation, step, world)
+			}
 		}
 
 		survivors := cull(world)
@@ -98,10 +89,58 @@ func main() {
 			world.addPeep(clone)
 		}
 
-		fmt.Printf("%d %d\n", generations, len(survivors))
-		// tbprint(0, 0, termbox.ColorWhite, termbox.ColorDefault, fmt.Sprintf("%d %d\n", generations, len(survivors)))
+		fmt.Printf("%d %d\n", generation, len(survivors))
 	}
 	fmt.Println("done")
+}
+
+func produceImage(generation, step int, world *World) {
+	img := image.NewNRGBA(image.Rect(0, 0, world.XSize, world.YSize))
+	for x := 0; x < world.XSize; x++ {
+		for y := 0; y < world.XSize; y++ {
+			offset := y*world.XSize + x
+			if world.cells[offset] == EMPTY {
+				img.Set(x, y, color.White)
+			} else {
+				img.Set(x, y, color.Black)
+			}
+		}
+	}
+	directory := fmt.Sprintf("%03d", generation)
+	err := createIfNotExists(directory)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	f, err := os.Create(fmt.Sprintf("%s/image%03d.png", directory, step))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := png.Encode(f, img); err != nil {
+		_ = f.Close()
+		log.Fatal(err)
+	}
+
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func createIfNotExists(directory string) error {
+	err := os.Mkdir(directory, os.ModePerm)
+	if err != nil {
+		pathErr, ok := err.(*fs.PathError)
+		if ok {
+			sysErr, ok := pathErr.Err.(syscall.Errno)
+			if ok {
+				if sysErr == syscall.EEXIST {
+					return nil
+				}
+			}
+		}
+	}
+	return err
 }
 
 func cull(world *World) []*Individual {
@@ -110,8 +149,8 @@ func cull(world *World) []*Individual {
 
 	var survivors []*Individual
 	for _, peep := range peeps {
-		if peep.location.X > 40 && peep.location.X < 60 &&
-			peep.location.Y > 40 && peep.location.Y < 60 {
+		if peep.location.X > 80 &&
+			peep.location.Y > 80 {
 			survivors = append(survivors, peep)
 		}
 	}

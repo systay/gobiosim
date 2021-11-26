@@ -1,9 +1,5 @@
 package main
 
-import (
-	"github.com/nsf/termbox-go"
-)
-
 type (
 	Cell  = uint16
 	World struct {
@@ -55,15 +51,6 @@ func (world *World) updateLocation(peepIdx int, location Coord) {
 	world.cells[oldOffset] = EMPTY
 	world.cells[newOffset] = Cell(peepIdx)
 	world.peeps[peepIdx].location = location
-}
-
-func (world *World) printIndividuals() {
-	_ = termbox.Clear(termbox.ColorBlack, termbox.ColorBlack)
-	for _, peep := range world.peeps {
-		tbprint(peep.location.X, peep.location.Y, termbox.ColorGreen, termbox.ColorBlue, " X ")
-	}
-
-	_ = termbox.Flush()
 }
 
 func (world *World) clearAll() {
