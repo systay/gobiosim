@@ -21,7 +21,7 @@ type simulation struct {
 const (
 	MOVEMENT      = 3
 	POPULATION    = 1000
-	MUTATION_RATE = 10
+	MUTATION_RATE = 10 // x in 1000
 	GENERATIONS   = 1000
 	STEPS_PER_GEN = 250
 	SIZE          = 100
@@ -58,7 +58,6 @@ func main() {
 		for step := 0; step < s.world.StepsPerGeneration; step++ {
 			s.step()
 			if generation%20 == 0 {
-				// we only write an image every hundred generations
 				produceImage(generation, step, world)
 			}
 		}
@@ -190,11 +189,11 @@ func (s *simulation) step() {
 				case MOVE_X:
 					loc := individual.location
 					loc.X += int(value * MOVEMENT)
-					s.world.updateLocation(actions.peepID, loc)
+					individual.wasBlocked = s.world.updateLocation(actions.peepID, loc)
 				case MOVE_Y:
 					loc := individual.location
 					loc.Y += int(value * MOVEMENT)
-					s.world.updateLocation(actions.peepID, loc)
+					individual.wasBlocked = s.world.updateLocation(actions.peepID, loc)
 				}
 			}
 		}

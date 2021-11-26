@@ -37,7 +37,7 @@ func limit(v, max int) int {
 	return v
 }
 
-func (world *World) updateLocation(peepIdx int, location Coord) {
+func (world *World) updateLocation(peepIdx int, location Coord) (blocked bool) {
 	// contain ourselves to the given world
 	location.X = limit(location.X, world.XSize-1)
 	location.Y = limit(location.Y, world.YSize-1)
@@ -45,7 +45,7 @@ func (world *World) updateLocation(peepIdx int, location Coord) {
 	// first we check if the spot is taken. if it isn't, we just ignore the location change
 	newOffset := world.offset(location)
 	if world.cells[newOffset] != EMPTY {
-		return
+		return true
 	}
 
 	// if the spot is empty, we can move the peep to the new location
@@ -53,6 +53,7 @@ func (world *World) updateLocation(peepIdx int, location Coord) {
 	world.cells[oldOffset] = EMPTY
 	world.cells[newOffset] = Cell(peepIdx)
 	world.peeps[peepIdx].location = location
+	return false
 }
 
 func (world *World) clearAll() {

@@ -11,6 +11,7 @@ type (
 		location   Coord
 		birthPlace Coord
 		age        uint16
+		wasBlocked bool // will be true if this individual was not able to do an action last step because it was blocked
 		brain      *NeuralNet
 	}
 
@@ -20,7 +21,7 @@ type (
 )
 
 func createIndividual(x, y int) *Individual {
-	genome := makeRandomGenome(rand.Intn(10)+2)
+	genome := makeRandomGenome(rand.Intn(10) + 2)
 	brain, err := genome.buildNet()
 	if err != nil {
 		panic(err)
@@ -147,6 +148,12 @@ func getSensorValue(i *Individual, w *World, s Sensor) float64 {
 	case AGE:
 		// sets the age to a normalized value between 0 and 1
 		return float64(i.age) / float64(w.StepsPerGeneration)
+
+	case BLOCK:
+		if i.wasBlocked {
+			return 1
+		}
+		return 0
 
 	}
 	panic("oh noes")
