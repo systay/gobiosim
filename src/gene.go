@@ -29,7 +29,7 @@ type (
 	}
 )
 
-func (g *Gene) weightAsFloat() float32 {
+func (g Gene) weightAsFloat() float32 {
 	return float32(g.weight) / 8192.0
 }
 
@@ -77,7 +77,7 @@ func (id *identifiable) idOf(obj interface{}) (int, bool) {
 }
 
 func (g Genome) buildNet() (*NeuralNet, error) {
-	graph, paths, err := buildGraphAndPaths(g)
+	graph, paths, err := buildGraphAndPaths(&g)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func NewNeuralNet(noOfNeurons int) *NeuralNet {
 	}
 }
 
-func buildGraphAndPaths(g Genome) (*Graph, []Path, error) {
+func buildGraphAndPaths(g *Genome) (*Graph, []Path, error) {
 	maxPossibleSize := len(g.genes) * 2
 	graph := NewGraph(maxPossibleSize)
 	nodes := &identifiable{}
@@ -145,6 +145,9 @@ func buildGraphAndPaths(g Genome) (*Graph, []Path, error) {
 			obj = getSensor(gene.sourceID)
 			isSensor = true
 		} else {
+			if g.noOfNeurons == 0 {
+				g.noOfNeurons = 1
+			}
 			obj = int(gene.sourceID) % g.noOfNeurons
 		}
 		srcID, added := nodes.idOf(obj)
@@ -162,6 +165,9 @@ func buildGraphAndPaths(g Genome) (*Graph, []Path, error) {
 			obj = getAction(gene.sinkID)
 			isAction = true
 		} else {
+			if g.noOfNeurons == 0 {
+				g.noOfNeurons = 1
+			}
 			obj = int(gene.sourceID) % g.noOfNeurons
 		}
 		dstID, added := nodes.idOf(obj)
@@ -207,4 +213,57 @@ func getSensor(source uint8) Sensor {
 
 func getAction(source uint8) Action {
 	return Action(source % uint8(NUM_ACTIONS))
+}
+
+func shouldMutate() bool {
+	return rand.Intn(1000) < MUTATION_RATE
+}
+
+func (g Genome) clone() (output Genome, mutant bool) {
+	output = g
+	if len(g.genes) == 0 {
+		if shouldMutate() {
+			mutant = true
+			output.genes = append(output.genes, makeRandomGene())
+		}
+		return
+	}
+
+	for idx, gene := range output.genes {
+		if shouldMutate() {
+			mutant = true
+			switch rand.Intn(3) {
+			case 0:
+				gene.sourceID = uint8(int(gene.sourceID) + plusMinusOne())
+			case 1:
+				gene.sinkID = uint8(int(gene.sinkID) + plusMinusOne())
+			case 2:
+				gene.weight = int16(int(gene.weight) + plusMinusOne()*10)
+			}
+			normalize := gene.normalize(output.noOfNeurons)
+			output.genes[idx] = normalize
+		}
+	}
+
+	if shouldMutate() {
+		// add a new gene
+		mutant = true
+		pos := rand.Intn(len(output.genes))
+		output.genes = append(output.genes[:pos+1], output.genes[pos:]...)
+		output.genes[pos] = makeRandomGene()
+	}
+
+	if shouldMutate() {
+		// remove gene
+		mutant = true
+		pos := rand.Intn(len(output.genes))
+		output.genes = append(output.genes[:pos], output.genes[pos+1:]...)
+	}
+
+	if shouldMutate() {
+		// add/remove neuron
+		mutant = true
+		output.noOfNeurons += plusMinusOne()
+	}
+	return
 }

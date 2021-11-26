@@ -20,7 +20,7 @@ type (
 )
 
 func createIndividual(x, y int) *Individual {
-	genome := makeRandomGenome(rand.Intn(10))
+	genome := makeRandomGenome(rand.Intn(10)+2)
 	brain, err := genome.buildNet()
 	if err != nil {
 		panic(err)
@@ -73,7 +73,6 @@ func (i *Individual) step(world *World) Actions {
 		handleFiring(conn.To, conn.multiplier*srcValue)
 	}
 
-
 	// If neurons received signals in the last step, we could now have new signals that we need to handle
 	// Since the neural net is not an acyclic graph, we limit the number of signals we allow per step and individual
 	// We could deal with this in other ways, this method was chosen mostly because it is simple
@@ -108,24 +107,8 @@ func plusMinusOne() int {
 func (i *Individual) clone() *Individual {
 	clone := *i
 	clone.age = 0
-	mutant := false
-	for idx, gene := range clone.genome.genes {
-		normFloat64 := rand.Intn(1000)
-		rate := MUTATION_RATE
-		if normFloat64 < rate {
-			mutant = true
-			switch rand.Intn(3) {
-			case 0:
-				gene.sourceID = uint8(int(gene.sourceID) + plusMinusOne())
-			case 1:
-				gene.sinkID = uint8(int(gene.sinkID) + plusMinusOne())
-			case 2:
-				gene.weight = int16(int(gene.weight) + plusMinusOne()*10)
-			}
-			normalize := gene.normalize(clone.genome.noOfNeurons)
-			clone.genome.genes[idx] = normalize
-		}
-	}
+	var mutant bool
+	clone.genome, mutant = clone.genome.clone()
 	if mutant {
 		net, err := clone.genome.buildNet()
 		if err != nil {
