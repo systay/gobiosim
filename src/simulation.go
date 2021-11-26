@@ -22,7 +22,7 @@ const (
 	MOVEMENT      = 3
 	POPULATION    = 1000
 	MUTATION_RATE = 10 // x in 1000
-	GENERATIONS   = 1000
+	GENERATIONS   = 10000
 	STEPS_PER_GEN = 250
 	SIZE          = 300
 )
@@ -102,40 +102,46 @@ func main() {
 }
 
 func produceImage(generation, step int, world *World) {
-	img := image.NewNRGBA(image.Rect(0, 0, world.XSize, world.YSize))
-	for x := 0; x < world.XSize; x++ {
-		for y := 0; y < world.XSize; y++ {
-			offset := y*world.XSize + x
-			if world.cells[offset] == EMPTY {
-				if world.insideSurvivalBox(x, y) {
-					img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 0xff})
+	// we copy the cells and write the image on a separate thread
+	cells := make([]Cell, len(world.cells))
+	copy(cells, world.cells)
+
+	go func() {
+		img := image.NewNRGBA(image.Rect(0, 0, world.XSize, world.YSize))
+		for x := 0; x < world.XSize; x++ {
+			for y := 0; y < world.XSize; y++ {
+				offset := y*world.XSize + x
+				if cells[offset] == EMPTY {
+					if world.insideSurvivalBox(x, y) {
+						img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 0xff})
+					} else {
+						img.Set(x, y, color.White)
+					}
 				} else {
-					img.Set(x, y, color.White)
+					img.Set(x, y, color.Black)
 				}
-			} else {
-				img.Set(x, y, color.Black)
 			}
 		}
-	}
-	directory := fmt.Sprintf("%04d", generation)
-	err := mkdirIfNotExists(directory)
-	if err != nil {
-		log.Fatal(err)
-	}
+		directory := fmt.Sprintf("%04d", generation)
+		err := mkdirIfNotExists(directory)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	f, err := os.Create(fmt.Sprintf("%s/image%03d.png", directory, step))
-	if err != nil {
-		log.Fatal(err)
-	}
+		f, err := os.Create(fmt.Sprintf("%s/image%03d.png", directory, step))
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	if err := png.Encode(f, img); err != nil {
-		_ = f.Close()
-		log.Fatal(err)
-	}
+		if err := png.Encode(f, img); err != nil {
+			_ = f.Close()
+			log.Fatal(err)
+		}
 
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
+		if err := f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
 }
 
 func mkdirIfNotExists(directory string) error {
@@ -199,6 +205,14 @@ func (s *simulation) step() {
 				case MOVE_Y:
 					loc := individual.location
 					loc.Y += int(value * MOVEMENT)
+					individual.wasBlocked = s.world.updateLocation(actions.peepID, loc)
+				case MOVE_RANDOM:
+					loc := individual.location
+					if plusMinusOne() > 0 {
+						loc.X += int(value * MOVEMENT)
+					} else {
+						loc.Y += int(value * MOVEMENT)
+					}
 					individual.wasBlocked = s.world.updateLocation(actions.peepID, loc)
 				}
 			}

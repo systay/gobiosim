@@ -31,6 +31,7 @@ const (
 const (
 	MOVE_X      Action = iota // W +- X component of movement
 	MOVE_Y                    // W +- Y component of movement
+	MOVE_RANDOM               // W +- Y component of movement
 	NUM_ACTIONS               // <<----------------- END OF ACTIVE ACTIONS MARKER
 )
 
@@ -42,8 +43,9 @@ func (s Sensor) String() string {
 }
 
 var actionNames = map[Action]string{
-	MOVE_X: "MOVE_X",
-	MOVE_Y: "MOVE_Y",
+	MOVE_X:      "MOVE_X",
+	MOVE_Y:      "MOVE_Y",
+	MOVE_RANDOM: "MOVE_RANDOM",
 }
 
 var sensorNames = map[Sensor]string{
