@@ -64,8 +64,8 @@ func (world *World) clearAll() {
 }
 
 func (world *World) insideSurvivalBox(x, y int) bool {
-	return x > world.surviveTopLeft.X &&
-		x < world.surviveBottomRight.X &&
-		y > world.surviveTopLeft.Y &&
-		y < world.surviveBottomRight.Y
+	return x >= world.surviveTopLeft.X &&
+		x <= world.surviveBottomRight.X &&
+		y >= world.surviveTopLeft.Y &&
+		y <= world.surviveBottomRight.Y
 }

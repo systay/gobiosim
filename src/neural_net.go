@@ -96,6 +96,10 @@ func (n *NeuralNet) getNeuronByID(id int) *Neuron {
 }
 
 func (n *NeuralNet) String() string {
+	if len(n.Connections) == 0 {
+		return "{}"
+	}
+
 	var sensors []string
 	for idx, conn := range n.Connections {
 		sensors = append(sensors, fmt.Sprintf("%d:%s", idx, conn))
@@ -117,7 +121,7 @@ func (conn Connection) String() (result string) {
 	if ok {
 		result += action.action.String()
 	} else {
-		result = fmt.Sprintf("N%d", conn.To.(*Neuron).id)
+		result += fmt.Sprintf("N%d", conn.To.(*Neuron).id)
 	}
 
 	return

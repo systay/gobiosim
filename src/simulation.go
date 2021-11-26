@@ -107,17 +107,17 @@ func main() {
 }
 
 func dumpIndividuals(generation int, peeps []*Individual) {
-	data := make([]string, 0, len(peeps))
+	var data []string
 	seen := map[string]int{}
-	for i, peep := range peeps {
+	for _, peep := range peeps {
 		brain := peep.brain.String() + "\n"
 		if idx, ok := seen[brain]; ok {
 			data[idx] += "*"
 			continue
 		}
 
-		data[i] = brain
-		seen[brain] = i
+		seen[brain] = len(data)
+		data = append(data, brain)
 	}
 	output := strings.Join(data, "\n")
 	err := os.WriteFile(fmt.Sprintf("%04d/peeps.txt", generation), []byte(output), os.ModePerm)
