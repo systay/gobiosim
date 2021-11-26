@@ -8,6 +8,8 @@ type (
 		YSize              int
 		cells              []Cell
 		peeps              []*Individual
+		surviveTopLeft     Coord
+		surviveBottomRight Coord
 	}
 )
 
@@ -58,4 +60,11 @@ func (world *World) clearAll() {
 		world.cells[world.offset(peep.location)] = EMPTY
 	}
 	world.peeps = nil
+}
+
+func (world *World) insideSurvivalBox(x, y int) bool {
+	return x > world.surviveTopLeft.X &&
+		x < world.surviveBottomRight.X &&
+		y > world.surviveTopLeft.Y &&
+		y < world.surviveBottomRight.Y
 }

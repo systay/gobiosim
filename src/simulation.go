@@ -45,6 +45,8 @@ func main() {
 		XSize:              SIZE,
 		YSize:              SIZE,
 		cells:              make([]Cell, 100*100),
+		surviveTopLeft:     Coord{40, 40},
+		surviveBottomRight: Coord{60, 60},
 	}
 	fillWithRandomPeeps(world)
 
@@ -52,10 +54,10 @@ func main() {
 		world: world,
 	}
 
-	for generation := 0; generation < GENERATIONS; generation++{
-		for step :=0; step <  s.world.StepsPerGeneration; step++{
+	for generation := 0; generation < GENERATIONS; generation++ {
+		for step := 0; step < s.world.StepsPerGeneration; step++ {
 			s.step()
-			if generation % 100 == 0 {
+			if generation%100 == 0 {
 				// we only write an image every hundred generations
 				produceImage(generation, step, world)
 			}
@@ -100,7 +102,11 @@ func produceImage(generation, step int, world *World) {
 		for y := 0; y < world.XSize; y++ {
 			offset := y*world.XSize + x
 			if world.cells[offset] == EMPTY {
-				img.Set(x, y, color.White)
+				if world.insideSurvivalBox(x, y) {
+					img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 0xff})
+				} else {
+					img.Set(x, y, color.White)
+				}
 			} else {
 				img.Set(x, y, color.Black)
 			}
@@ -149,8 +155,7 @@ func cull(world *World) []*Individual {
 
 	var survivors []*Individual
 	for _, peep := range peeps {
-		if peep.location.X > 80 &&
-			peep.location.Y > 80 {
+		if world.insideSurvivalBox(peep.location.X, peep.location.Y) {
 			survivors = append(survivors, peep)
 		}
 	}
