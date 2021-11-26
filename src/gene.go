@@ -43,7 +43,7 @@ func makeRandomGene() Gene {
 	gene.sinkIsAction = rand.Int()%2 == 0
 	gene.sourceID = randUint8()
 	gene.sinkID = randUint8()
-	gene.weight = randInt16()
+	gene.weight = -randInt16() + randInt16()
 	return gene
 }
 

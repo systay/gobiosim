@@ -19,8 +19,6 @@ type (
 	Actions = []float64
 )
 
-var a = 0
-
 func createIndividual(x, y int) *Individual {
 	genome := makeRandomGenome(rand.Intn(10))
 	brain, err := genome.buildNet()
