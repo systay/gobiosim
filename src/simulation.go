@@ -22,10 +22,11 @@ type simulation struct {
 const (
 	MOVEMENT      = 3
 	POPULATION    = 1000
-	MUTATION_RATE = 10 // x in 1000
+	MUTATION_RATE = 100 // x in 1000
 	GENERATIONS   = 10000
 	STEPS_PER_GEN = 250
-	SIZE          = 300
+	SIZE          = 500
+	DUMP_EVERY    = 100
 )
 
 type act struct {
@@ -46,8 +47,8 @@ func main() {
 		XSize:              SIZE,
 		YSize:              SIZE,
 		cells:              make([]Cell, SIZE*SIZE),
-		surviveTopLeft:     Coord{0, 0},
-		surviveBottomRight: Coord{10, 100},
+		surviveTopLeft:     Coord{150, 150},
+		surviveBottomRight: Coord{250, 250},
 	}
 	fillWithRandomPeeps(world)
 
@@ -58,14 +59,14 @@ func main() {
 	for generation := 0; generation < GENERATIONS; generation++ {
 		for step := 0; step < s.world.StepsPerGeneration; step++ {
 			s.step()
-			if generation%20 == 0 {
+			if generation%DUMP_EVERY == 0 {
 				produceImage(generation, step, world)
 			}
 		}
 
 		survivors := cull(world)
 
-		if generation%20 == 0 {
+		if generation%DUMP_EVERY == 0 {
 			dumpIndividuals(generation, survivors)
 		}
 
@@ -89,7 +90,7 @@ func main() {
 		// random fill up of peeps until we reach desired population
 		for len(world.peeps) < POPULATION {
 			var clone *Individual
-			if shouldMutate() {
+			if plusMinusOne() > 0 {
 				// now and then we'll add a brand-new mutant to the mix, to try to get away from local minimum
 				clone = createIndividual(1, 1)
 			} else {
@@ -253,6 +254,7 @@ func (s *simulation) startPeeking() chan act {
 	for id, peep := range s.world.peeps {
 		wg.Add(1)
 		go func(peep *Individual, id int) {
+			peep.wasBlocked = false
 			peepActions <- act{
 				peepID:  id,
 				actions: peep.step(s.world),

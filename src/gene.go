@@ -240,7 +240,7 @@ func (g Genome) clone() (output Genome, mutant bool) {
 			case 1:
 				gene.sinkID = uint8(int(gene.sinkID) + plusMinusOne())
 			case 2:
-				gene.weight = int16(int(gene.weight) + plusMinusOne()*10)
+				gene.weight = int16(int(gene.weight) + plusMinusOne()*1000)
 			}
 			normalize := gene.normalize(output.noOfNeurons)
 			output.genes[idx] = normalize
