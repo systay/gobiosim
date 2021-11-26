@@ -193,12 +193,13 @@ func buildGraphAndPaths(g *Genome) (*Graph, []Path, error) {
 }
 
 func (g Gene) normalize(neuronCount int) Gene {
-	if g.sourceIsSensor {
+	if g.sourceIsSensor ||
+		neuronCount == 0 { // this condition because if the genome has no neurons, the alternative would panic
 		g.sourceID = g.sourceID % uint8(NUM_SENSES)
 	} else {
 		g.sourceID = g.sourceID % uint8(neuronCount)
 	}
-	if g.sinkIsAction {
+	if g.sinkIsAction || neuronCount == 0 {
 		g.sinkID = g.sinkID % uint8(NUM_ACTIONS)
 	} else {
 		g.sinkID = g.sinkID % uint8(neuronCount)
@@ -232,7 +233,8 @@ func (g Genome) clone() (output Genome, mutant bool) {
 	for idx, gene := range output.genes {
 		if shouldMutate() {
 			mutant = true
-			switch rand.Intn(3) {
+			r := rand.Intn(3)
+			switch r {
 			case 0:
 				gene.sourceID = uint8(int(gene.sourceID) + plusMinusOne())
 			case 1:

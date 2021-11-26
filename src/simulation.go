@@ -45,8 +45,8 @@ func main() {
 		XSize:              SIZE,
 		YSize:              SIZE,
 		cells:              make([]Cell, 100*100),
-		surviveTopLeft:     Coord{40, 40},
-		surviveBottomRight: Coord{60, 60},
+		surviveTopLeft:     Coord{0, 0},
+		surviveBottomRight: Coord{10, 100},
 	}
 	fillWithRandomPeeps(world)
 
@@ -57,7 +57,7 @@ func main() {
 	for generation := 0; generation < GENERATIONS; generation++ {
 		for step := 0; step < s.world.StepsPerGeneration; step++ {
 			s.step()
-			if generation%100 == 0 {
+			if generation%20 == 0 {
 				// we only write an image every hundred generations
 				produceImage(generation, step, world)
 			}
@@ -112,7 +112,7 @@ func produceImage(generation, step int, world *World) {
 			}
 		}
 	}
-	directory := fmt.Sprintf("%03d", generation)
+	directory := fmt.Sprintf("%04d", generation)
 	err := mkdirIfNotExists(directory)
 	if err != nil {
 		log.Fatal(err)
