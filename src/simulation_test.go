@@ -11,7 +11,7 @@ func init() {
 		StepsPerGeneration: STEPS_PER_GEN,
 		XSize:              SIZE,
 		YSize:              SIZE,
-		cells:              make([]Cell, 100*100),
+		cells:              make([]Cell, SIZE*SIZE),
 	}
 	fillWithRandomPeeps(world)
 	s = &simulation{

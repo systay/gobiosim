@@ -1,5 +1,10 @@
 package main
 
+import (
+	"fmt"
+	"strings"
+)
+
 type (
 	// An individual's "brain" is a neural net specified by a set
 	// of Genes where each Gene specifies one connection in the neural net (see
@@ -45,6 +50,7 @@ type (
 	}
 
 	Neuron struct {
+		id int
 		// when value reaches 1.0, the neuron will fire
 		// until then it will accumulate into the value,
 		// a state which survives between steps
@@ -79,11 +85,40 @@ func (n *NeuralNet) getSensorOffset(s Sensor) int {
 	n.Sensors = append(n.Sensors, s)
 	return len(n.Sensors) - 1
 }
+
 func (n *NeuralNet) getNeuronByID(id int) *Neuron {
 	neuron := n.Neurons[id]
 	if neuron == nil {
-		neuron = &Neuron{}
+		neuron = &Neuron{id: id}
 		n.Neurons[id] = neuron
 	}
 	return neuron
+}
+
+func (n *NeuralNet) String() string {
+	var sensors []string
+	for idx, conn := range n.Connections {
+		sensors = append(sensors, fmt.Sprintf("%d:%s", idx, conn))
+	}
+	return strings.Join(sensors, "\n")
+}
+
+func (conn Connection) String() (result string) {
+	sensor, ok := conn.From.(SensorInput)
+	if ok {
+		result = sensor.s.String()
+	} else {
+		result = fmt.Sprintf("N%d", conn.From.(*Neuron).id)
+	}
+
+	result += fmt.Sprintf(" -[%03f]-> ", conn.multiplier)
+
+	action, ok := conn.To.(ActionSink)
+	if ok {
+		result += action.action.String()
+	} else {
+		result = fmt.Sprintf("N%d", conn.To.(*Neuron).id)
+	}
+
+	return
 }

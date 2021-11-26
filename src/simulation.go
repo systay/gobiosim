@@ -9,6 +9,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -64,6 +65,10 @@ func main() {
 
 		survivors := cull(world)
 
+		if generation%20 == 0 {
+			dumpIndividuals(generation, survivors)
+		}
+
 		if len(survivors) == 0 {
 			fmt.Println("extinction")
 			os.Exit(0)
@@ -99,6 +104,26 @@ func main() {
 		fmt.Printf("%d %d\n", generation, len(survivors))
 	}
 	fmt.Println("done")
+}
+
+func dumpIndividuals(generation int, peeps []*Individual) {
+	data := make([]string, 0, len(peeps))
+	seen := map[string]int{}
+	for i, peep := range peeps {
+		brain := peep.brain.String() + "\n"
+		if idx, ok := seen[brain]; ok {
+			data[idx] += "*"
+			continue
+		}
+
+		data[i] = brain
+		seen[brain] = i
+	}
+	output := strings.Join(data, "\n")
+	err := os.WriteFile(fmt.Sprintf("%04d/peeps.txt", generation), []byte(output), os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func produceImage(generation, step int, world *World) {
