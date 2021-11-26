@@ -266,6 +266,9 @@ func (g Genome) clone() (output Genome, mutant bool) {
 		// add/remove neuron
 		mutant = true
 		output.noOfNeurons += plusMinusOne()
+		if output.noOfNeurons < 0 {
+			output.noOfNeurons = 0
+		}
 	}
 	return
 }

@@ -24,7 +24,7 @@ const (
 	MUTATION_RATE = 10 // x in 1000
 	GENERATIONS   = 1000
 	STEPS_PER_GEN = 250
-	SIZE          = 100
+	SIZE          = 300
 )
 
 type act struct {
@@ -34,7 +34,7 @@ type act struct {
 
 func init() {
 	seed := time.Now().UnixNano()
-	// nano := int64(1637780343848163000)
+	// seed := int64(1637951517777129656)
 	fmt.Printf("rand seed: %d\n", seed)
 	rand.Seed(seed)
 }
@@ -44,7 +44,7 @@ func main() {
 		StepsPerGeneration: STEPS_PER_GEN,
 		XSize:              SIZE,
 		YSize:              SIZE,
-		cells:              make([]Cell, 100*100),
+		cells:              make([]Cell, SIZE*SIZE),
 		surviveTopLeft:     Coord{0, 0},
 		surviveBottomRight: Coord{10, 100},
 	}
@@ -83,9 +83,15 @@ func main() {
 
 		// random fill up of peeps until we reach desired population
 		for len(world.peeps) < POPULATION {
-			peep := survivors[rand.Intn(len(survivors))]
-			clone := peep.clone()
-			clone.location = randomCoord(world.XSize, world.YSize)
+			var clone *Individual
+			if shouldMutate() {
+				// now and then we'll add a brand-new mutant to the mix, to try to get away from local minimum
+				clone = createIndividual(1, 1)
+			} else {
+				peep := survivors[rand.Intn(len(survivors))]
+				clone = peep.clone()
+				clone.location = randomCoord(world.XSize, world.YSize)
+			}
 			clone.birthPlace = clone.location
 			world.addPeep(clone)
 		}
