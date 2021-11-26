@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/cheggaaa/pb/v3"
 	"image"
 	"image/color"
 	"image/png"
@@ -23,7 +24,7 @@ const (
 	MOVEMENT      = 3
 	POPULATION    = 1000
 	MUTATION_RATE = 100 // x in 1000
-	GENERATIONS   = 10000
+	GENERATIONS   = 1000
 	STEPS_PER_GEN = 250
 	SIZE          = 500
 	DUMP_EVERY    = 100
@@ -56,7 +57,9 @@ func main() {
 		world: world,
 	}
 
+	bar := pb.ProgressBarTemplate(`Generation {{counters . }} Survivors: {{string . "survivors"}} {{bar . }} {{percent . }} {{rtime . "ETA %s"}}`).Start(GENERATIONS)
 	for generation := 0; generation < GENERATIONS; generation++ {
+		bar.Increment()
 		for step := 0; step < s.world.StepsPerGeneration; step++ {
 			s.step()
 			if generation%DUMP_EVERY == 0 {
@@ -65,7 +68,7 @@ func main() {
 		}
 
 		survivors := cull(world)
-
+		bar.Set("survivors", fmt.Sprintf("%d", len(survivors)))
 		if generation%DUMP_EVERY == 0 {
 			dumpIndividuals(generation, survivors)
 		}
@@ -101,9 +104,8 @@ func main() {
 			clone.birthPlace = clone.location
 			world.addPeep(clone)
 		}
-
-		fmt.Printf("%d %d\n", generation, len(survivors))
 	}
+	bar.Finish()
 	fmt.Println("done")
 }
 
