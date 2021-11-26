@@ -113,7 +113,7 @@ func produceImage(generation, step int, world *World) {
 		}
 	}
 	directory := fmt.Sprintf("%03d", generation)
-	err := createIfNotExists(directory)
+	err := mkdirIfNotExists(directory)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func produceImage(generation, step int, world *World) {
 	}
 }
 
-func createIfNotExists(directory string) error {
+func mkdirIfNotExists(directory string) error {
 	err := os.Mkdir(directory, os.ModePerm)
 	if err != nil {
 		pathErr, ok := err.(*fs.PathError)
@@ -177,6 +177,8 @@ func randomCoord(x int, y int) Coord {
 	return place
 }
 
+// Goes over all individuals and first lets their neural nets run and produce an action slice.
+// This is done concurrently, and then the actions are actually performed in a single thread
 func (s *simulation) step() {
 	peepActions := s.startPeeking()
 
@@ -199,6 +201,7 @@ func (s *simulation) step() {
 	}
 }
 
+// runs the neural nets concurrently and produces a channel with their action outputs
 func (s *simulation) startPeeking() chan act {
 	// we start all the individuals in separate goroutines, and then wait for them to finish
 	peepActions := make(chan act, len(s.world.peeps))

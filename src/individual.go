@@ -38,6 +38,7 @@ func createIndividual(x, y int) *Individual {
 }
 
 func (i *Individual) step(world *World) Actions {
+	// First we build the sensor inputs that the brains uses into a slice
 	inputs := make([]float64, 0, len(i.brain.Sensors))
 	for _, sensor := range i.brain.Sensors {
 		value := getSensorValue(i, world, sensor)
@@ -46,6 +47,8 @@ func (i *Individual) step(world *World) Actions {
 	actions := make(Actions, NUM_ACTIONS)
 	var neuronFirings []*Neuron
 
+	// this is the function that will be called whenever there is a signal.
+	// The recipient of the signal can be a neuron, or it can be an action sink
 	handleFiring := func(to Sink, v float64) {
 		switch dst := to.(type) {
 		case ActionSink:
@@ -60,6 +63,7 @@ func (i *Individual) step(world *World) Actions {
 		}
 	}
 
+	// Next step is to fire the connections to the sensor inputs
 	for _, conn := range i.brain.Connections {
 		sensor, ok := conn.From.(SensorInput)
 		if !ok {
@@ -69,6 +73,10 @@ func (i *Individual) step(world *World) Actions {
 		handleFiring(conn.To, conn.multiplier*srcValue)
 	}
 
+
+	// If neurons received signals in the last step, we could now have new signals that we need to handle
+	// Since the neural net is not an acyclic graph, we limit the number of signals we allow per step and individual
+	// We could deal with this in other ways, this method was chosen mostly because it is simple
 	iterLeft := 10
 	for len(neuronFirings) > 0 && iterLeft > 0 {
 		iterLeft--
