@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -37,10 +38,12 @@ func randInt16() int16 {
 	return int16(rand.Int63() >> 48)
 }
 
+const NEURON_PREFERENCE = 4
+
 func makeRandomGene() Gene {
 	gene := Gene{}
-	gene.sourceIsSensor = rand.Int()%2 == 0
-	gene.sinkIsAction = rand.Int()%2 == 0
+	gene.sourceIsSensor = rand.Int()%NEURON_PREFERENCE == 0
+	gene.sinkIsAction = rand.Int()%NEURON_PREFERENCE == 0
 	gene.sourceID = randUint8()
 	gene.sinkID = randUint8()
 	gene.weight = -randInt16() + randInt16()
@@ -76,12 +79,16 @@ func (id *identifiable) idOf(obj interface{}) (int, bool) {
 	return len(id.objects) - 1, true
 }
 
+var TooSimple = fmt.Errorf("too simple brain")
+
 func (g Genome) buildNet() (*NeuralNet, error) {
 	graph, paths, err := buildGraphAndPaths(&g)
 	if err != nil {
 		return nil, err
 	}
-
+	if len(paths) == 0 {
+		return nil, TooSimple
+	}
 	result := NewNeuralNet(g.noOfNeurons)
 
 	seen := map[int]interface{}{}

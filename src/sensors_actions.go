@@ -14,9 +14,9 @@ type (
 const (
 	LOC_X           Sensor = iota // I distance from left edge
 	LOC_Y                         // I distance from bottom
-	BOUNDARY_DIST_X               // I X distance to nearest edge of world
-	BOUNDARY_DIST                 // I distance to nearest edge of world
-	BOUNDARY_DIST_Y               // I Y distance to nearest edge of world
+	BOUNDARY_DIST_X               // I X distance to the nearest edge of world
+	BOUNDARY_DIST                 // I distance to the nearest edge of world
+	BOUNDARY_DIST_Y               // I Y distance to the nearest edge of world
 	AGE                           // I
 	BLOCK                         // I 1 if the individual was blocked last step, 0 otherwise
 	NUM_SENSES                    // <<------------------ END OF ACTIVE SENSES MARKER

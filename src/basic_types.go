@@ -13,6 +13,10 @@ type (
 		mag       int
 		Direction Compass
 	}
+
+	Area struct {
+		TopLeft, BottomRight Coord
+	}
 )
 
 const (
@@ -76,4 +80,12 @@ func (c Compass) asNormalizedCoord() Coord {
 	default:
 		panic(42)
 	}
+}
+
+func (a Area) inside(x, y int) bool {
+	return x >= a.TopLeft.X &&
+		x <= a.BottomRight.X &&
+		y >= a.TopLeft.Y &&
+		y <= a.BottomRight.Y
+
 }

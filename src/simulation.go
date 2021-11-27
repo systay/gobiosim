@@ -48,8 +48,10 @@ func main() {
 		XSize:              SIZE,
 		YSize:              SIZE,
 		cells:              make([]Cell, SIZE*SIZE),
-		surviveTopLeft:     Coord{150, 150},
-		surviveBottomRight: Coord{250, 250},
+		survivalArea: Area{
+			TopLeft:     Coord{0, 0},
+			BottomRight: Coord{250, 250},
+		},
 	}
 	fillWithRandomPeeps(world)
 
@@ -140,7 +142,7 @@ func produceImage(generation, step int, world *World) {
 			for y := 0; y < world.XSize; y++ {
 				offset := y*world.XSize + x
 				if cells[offset] == EMPTY {
-					if world.insideSurvivalBox(x, y) {
+					if world.survivalArea.inside(x, y) {
 						img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 0xff})
 					} else {
 						img.Set(x, y, color.White)
@@ -194,7 +196,7 @@ func cull(world *World) []*Individual {
 
 	var survivors []*Individual
 	for _, peep := range peeps {
-		if world.insideSurvivalBox(peep.location.X, peep.location.Y) {
+		if world.survivalArea.inside(peep.location.X, peep.location.Y) {
 			survivors = append(survivors, peep)
 		}
 	}
@@ -204,6 +206,10 @@ func cull(world *World) []*Individual {
 func fillWithRandomPeeps(world *World) {
 	for i := 0; i < POPULATION; i++ {
 		individual := createIndividual(world.XSize, world.YSize)
+		if len(individual.brain.Connections) < 3 {
+			i--
+			continue
+		}
 		world.addPeep(individual)
 	}
 }
