@@ -9,6 +9,7 @@ type (
 		cells              []Cell
 		peeps              []*Individual
 		survivalArea       Area
+		barriers           []Area
 	}
 )
 
@@ -23,7 +24,11 @@ func (world *World) addPeep(individual *Individual) {
 }
 
 func (world *World) offset(place Coord) int {
-	return place.Y*world.XSize + place.X
+	return world.offsetXY(place.X, place.Y)
+}
+
+func (world *World) offsetXY(x, y int) int {
+	return y*world.XSize + x
 }
 
 func limit(v, max int) int {
@@ -60,4 +65,15 @@ func (world *World) clearAll() {
 		world.cells[world.offset(peep.location)] = EMPTY
 	}
 	world.peeps = nil
+}
+
+func (world *World) fillBarriers() {
+	for _, barrier := range world.barriers {
+		for x := barrier.TopLeft.X; x < barrier.BottomRight.X; x++ {
+			for y := barrier.TopLeft.Y; y < barrier.BottomRight.Y; y++ {
+				idx := world.offsetXY(x, y)
+				world.cells[idx] = BARRIER
+			}
+		}
+	}
 }

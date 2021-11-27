@@ -87,5 +87,4 @@ func (a Area) inside(x, y int) bool {
 		x <= a.BottomRight.X &&
 		y >= a.TopLeft.Y &&
 		y <= a.BottomRight.Y
-
 }

@@ -20,7 +20,7 @@ type (
 	Actions = []float64
 )
 
-func createIndividual(x, y int) *Individual {
+func createIndividual(world *World) *Individual {
 tryAgain:
 	genome := makeRandomGenome(rand.Intn(20) + 2)
 	brain, err := genome.buildNet()
@@ -30,7 +30,7 @@ tryAgain:
 	if err != nil {
 		panic(err)
 	}
-	place := randomCoord(x, y)
+	place := world.randomCoord()
 	peep := &Individual{
 		genome:     genome,
 		location:   place,

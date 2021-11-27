@@ -50,9 +50,20 @@ func main() {
 		cells:              make([]Cell, SIZE*SIZE),
 		survivalArea: Area{
 			TopLeft:     Coord{0, 0},
-			BottomRight: Coord{250, 250},
+			BottomRight: Coord{100, SIZE},
 		},
+		barriers: []Area{{
+			TopLeft:     Coord{200, 0},
+			BottomRight: Coord{210, 100},
+		}, {
+			TopLeft:     Coord{200, SIZE - 100},
+			BottomRight: Coord{210, SIZE},
+		}, {
+			TopLeft:     Coord{220, 90},
+			BottomRight: Coord{240, SIZE - 90},
+		}},
 	}
+	world.fillBarriers()
 	fillWithRandomPeeps(world)
 
 	s := &simulation{
@@ -86,7 +97,7 @@ func main() {
 		for _, survivor := range survivors {
 			for i := 0; i < copies; i++ {
 				clone := survivor.clone()
-				clone.location = randomCoord(world.XSize, world.YSize)
+				clone.location = world.randomCoord()
 				clone.birthPlace = clone.location
 				world.addPeep(clone)
 			}
@@ -97,11 +108,11 @@ func main() {
 			var clone *Individual
 			if plusMinusOne() > 0 {
 				// now and then we'll add a brand-new mutant to the mix, to try to get away from local minimum
-				clone = createIndividual(1, 1)
+				clone = createIndividual(world)
 			} else {
 				peep := survivors[rand.Intn(len(survivors))]
 				clone = peep.clone()
-				clone.location = randomCoord(world.XSize, world.YSize)
+				clone.location = world.randomCoord()
 			}
 			clone.birthPlace = clone.location
 			world.addPeep(clone)
@@ -141,13 +152,16 @@ func produceImage(generation, step int, world *World) {
 		for x := 0; x < world.XSize; x++ {
 			for y := 0; y < world.XSize; y++ {
 				offset := y*world.XSize + x
-				if cells[offset] == EMPTY {
+				switch cells[offset] {
+				case EMPTY:
 					if world.survivalArea.inside(x, y) {
 						img.Set(x, y, color.RGBA{R: 0, G: 255, B: 0, A: 0xff})
 					} else {
 						img.Set(x, y, color.White)
 					}
-				} else {
+				case BARRIER:
+					img.Set(x, y, color.RGBA{R: 200, G: 200, B: 200, A: 0xff})
+				default: // here is an individual
 					img.Set(x, y, color.Black)
 				}
 			}
@@ -205,7 +219,7 @@ func cull(world *World) []*Individual {
 
 func fillWithRandomPeeps(world *World) {
 	for i := 0; i < POPULATION; i++ {
-		individual := createIndividual(world.XSize, world.YSize)
+		individual := createIndividual(world)
 		if len(individual.brain.Connections) < 3 {
 			i--
 			continue
@@ -214,12 +228,18 @@ func fillWithRandomPeeps(world *World) {
 	}
 }
 
-func randomCoord(x int, y int) Coord {
-	place := Coord{
-		X: rand.Intn(x),
-		Y: rand.Intn(y),
+func (w *World) randomCoord() Coord {
+	location := Coord{
+		X: rand.Intn(w.XSize),
+		Y: rand.Intn(w.YSize),
 	}
-	return place
+
+	newOffset := w.offset(location)
+	if w.cells[newOffset] != EMPTY {
+		return w.randomCoord()
+	}
+
+	return location
 }
 
 // Goes over all individuals and first lets their neural nets run and produce an action slice.
