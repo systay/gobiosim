@@ -21,11 +21,10 @@ type (
 )
 
 func createIndividual(world *World) *Individual {
-tryAgain:
 	genome := makeRandomGenome(rand.Intn(20) + 2)
 	brain, err := genome.buildNet()
 	if err == TooSimple {
-		goto tryAgain
+		return createIndividual(world)
 	}
 	if err != nil {
 		panic(err)
@@ -113,17 +112,20 @@ func (i *Individual) clone() *Individual {
 	clone := *i
 	clone.age = 0
 	var mutant bool
-tryAgain:
-	clone.genome, mutant = clone.genome.clone()
-	if mutant {
-		net, err := clone.genome.buildNet()
-		if err != nil {
-			if err == TooSimple {
-				goto tryAgain
+	ready := false
+	for !ready {
+		clone.genome, mutant = clone.genome.clone()
+		if mutant {
+			net, err := clone.genome.buildNet()
+			if err != nil {
+				if err != TooSimple {
+					panic(err)
+				}
+			} else {
+				ready = true
 			}
-			panic(err)
+			clone.brain = net
 		}
-		clone.brain = net
 	}
 	return &clone
 }
